@@ -7,6 +7,7 @@ from PyQt5.QtCore import QUrl
 from PyQt5.QtCore import QTimer
 import sys
 import os
+import signal
 import subprocess
 from pytryfi import PyTryFi
 import requests

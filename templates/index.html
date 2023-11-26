@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Fiinder</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+</head>
+
+<body>
+  <div id="map"></div>
+
+  <script src="https://cdn.socket.io/4.2.0/socket.io.min.js"></script>
+
+  <script>
+    var socket = io.connect('http://localhost:5000');
+
+    // Set up leaflet map and add GPS marker
+    var map = L.map('map').setView([47.6364, -122.3901], 16);
+    L.tileLayer('https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=6adbe0f36a364c688af2e0605ab461db', {
+      maxZoom: 18,
+    }).addTo(map);
+
+    // Update the size of the map
+    map.invalidateSize();
+
+    // create a custom icon for the gps
+    var gps = L.icon({
+      iconUrl: '/static/arrow80x80.png', // the URL to your icon image
+      iconSize: [40, 40], // size of the icon
+      iconAnchor: [20, 20], // point of the icon which will correspond to marker's location
+      //popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+
+    // create a custom icon for bruce
+    var fi_collar = L.icon({
+      iconUrl: '/static/bruce80x60.png', // the URL to your icon image
+      iconSize: [40, 30], // size of the icon
+      iconAnchor: [20, 15], // point of the icon which will correspond to marker's location
+      //popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
+    });
+
+    // markers
+    var marker = L.marker([0, 0], { icon: gps }).addTo(map);
+    var trackedMarker = null;
+
+    // listen for the 'update_location' event from GPS
+    socket.on('update_location', function (data) {
+      // update the GPS marker location
+      marker.setLatLng([data.latitude, data.longitude]);
+
+      // adjust the view to fit both markers
+      if (trackedMarker) {
+        adjustView();
+      }
+    });
+    
+    // adjust the map view to fit the markers
+    function adjustView() {
+      // create an array to hold the coordinates of all markers
+      var coordinates = [];
+
+      // add the coordinates of each marker to the array
+      coordinates.push(marker.getLatLng());
+      if (trackedMarker) {
+        coordinates.push(trackedMarker.getLatLng());
+      }
+
+      // adjust the map view to fit the markers
+      if (coordinates.length > 1) {
+        map.fitBounds(coordinates);
+      } else {
+        map.setView(coordinates[0], 13); // 13 is the zoom level
+      }
+    }
+
+    // listen for the 'update_tracked_location' event from Bruce
+    socket.on('update_tracked_location', function (data) {
+      // create and add the tracked marker to the map if it doesn't exist
+      if (!trackedMarker) {
+        trackedMarker = L.marker([data.latitude, data.longitude], { icon: fi_collar }).addTo(map);
+      } else {
+        // update the tracked marker location
+        trackedMarker.setLatLng([data.latitude, data.longitude]);
+      }
+
+      // adjust the view to fit both markers
+      adjustView();
+    });
+  </script>
+
+</body>
+
+</html>
