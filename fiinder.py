@@ -105,9 +105,11 @@ class App(QWidget):
         latitude = packet.lat
         longitude = packet.lon
 
-        # Send the GPS data to the server
-        response = requests.post('http://localhost:5000/update_location', data={'latitude': latitude, 'longitude': longitude})
+        # Get the orientation
+        orientation = packet.track
 
+        # Send the GPS data to the server
+        response = requests.post('http://localhost:5000/update_location', data={'latitude': latitude, 'longitude': longitude, 'orientation': orientation})
         if response.status_code == 200:
             print('Successfully sent GPS data to server')
             print('Received GPS data from server:', response.json())
@@ -118,7 +120,7 @@ class App(QWidget):
         if self.timer is None or not self.timer.isActive():
             self.timer = QTimer()
             self.timer.timeout.connect(self.update_location)
-            self.timer.start(5000)  # start the timer with an interval of 5000 milliseconds
+            self.timer.start(2000)  # start the timer with an interval of 2 seconds
 
     def toggle_tracking(self):
         if self.tryfi is None:

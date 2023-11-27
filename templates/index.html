@@ -5,8 +5,14 @@
   <title>Fiinder</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Include Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <!-- Include Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <!-- Include Leaflet.RotatedMarker plugin -->
+  <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+  <!-- Include Socket.IO client script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
   <style>
     html,
     body {
@@ -21,8 +27,6 @@
       width: 100%;
     }
   </style>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 
 <body>
@@ -35,8 +39,12 @@
 
     // Set up leaflet map and add GPS marker
     var map = L.map('map').setView([47.6364, -122.3901], 16);
-    L.tileLayer('https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=6adbe0f36a364c688af2e0605ab461db', {
+    L.tileLayer('https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=6adbe0f36a364c688af2e0605ab461db', {
       maxZoom: 18,
+      subdomains: ['a', 'b', 'c'],
+      attribution: 'Map data &copy; <a href="https://www.thunderforest.com/">Thunderforest</a> contributors, ' +
+        '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+        'Imagery © <a href="https://www.thunderforest.com/">Thunderforest</a>',
     }).addTo(map);
 
     // Update the size of the map
@@ -58,21 +66,30 @@
       //popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
     });
 
+    console.log(L.RotatedMarker); // log the L.RotatedMarker to the console
+
     // markers
     var marker = L.marker([0, 0], { icon: gps }).addTo(map);
     var trackedMarker = null;
 
     // listen for the 'update_location' event from GPS
     socket.on('update_location', function (data) {
-      // update the GPS marker location
-      marker.setLatLng([data.latitude, data.longitude]);
+      // remove the old marker
+      map.removeLayer(marker);
+
+      // create a new marker with the updated location and orientation
+      marker = L.marker([data.latitude, data.longitude], {
+        icon: gps,
+        rotationAngle: data.orientation,
+        rotationOrigin: 'center center'
+      }).addTo(map);
 
       // adjust the view to fit both markers
       if (trackedMarker) {
         adjustView();
       }
     });
-    
+
     // adjust the map view to fit the markers
     function adjustView() {
       // create an array to hold the coordinates of all markers
