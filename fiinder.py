@@ -4,14 +4,9 @@ import subprocess
 import time
 from utils.modem_comm import open_modem_connection, send_at, signal_quality_indicator
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QGridLayout, QSpacerItem, QSizePolicy
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWebEngineWidgets import QWebEngineProfile
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QUrl
-from PyQt5.QtCore import QTimer
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
+from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
 from pytryfi import PyTryFi
 import requests
 import gpsd
@@ -30,7 +25,7 @@ class SignalQualityThread(QThread):
 
     def update_signal_quality(self, ser):
         response = send_at(ser)
-        print(response)
+        print(response) # delete this line later, for dev purposes only
         # parse response to get rssi and rsrq values
         for line in response:
             signal_info = line.decode('utf-8').strip()  # Remove newline characters
@@ -38,14 +33,14 @@ class SignalQualityThread(QThread):
                 rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]  # Split the line to get rssi and rsrq
                 signal_quality = signal_quality_indicator(rssi, rsrq)
                 self.signal_quality_updated.emit(signal_quality)
-                print("Signal Quality: " + str(signal_quality))
+                print("Signal Quality: " + str(signal_quality)) # delete this line later, for dev purposes only
                 break  # Exit the loop once we've found the +CSQ line
         else:
             print("No +CSQ line found in response")
             self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ
 
 class App(QWidget):
-    def __init__(self, skip_login=True):
+    def __init__(self, skip_login=False):
         super().__init__()
 
         self.tryfi = None
@@ -68,7 +63,7 @@ class App(QWidget):
         self.map = QWebEngineView()
         self.map.load(QUrl('http://localhost:5000'))
         self.layout.addWidget(self.map, 3, 0, 1, 9)
-    
+
         # set the stretch factor for the map
         self.layout.setRowStretch(3, 1)
 
@@ -76,11 +71,7 @@ class App(QWidget):
         gpsd.connect()
 
         # delay the first update_location call
-        QTimer.singleShot(5000, self.update_location)  # delay of 5 seconds
-
-        # font stuff
-        bold = QFont()
-        bold.setBold(True)
+        QTimer.singleShot(1000, self.update_location)
 
         # create tracking status label
         self.tracking_button = QPushButton('Start Tracking', self)
@@ -89,13 +80,17 @@ class App(QWidget):
 
         self.layout.addWidget(self.tracking_button, 1, 0)
 
+        # create the GPS fix status indicator
+        self.fix_status_icon = QLabel()
+        self.layout.addWidget(self.fix_status_icon, 1, 7)
+
         # create the signal quality indicator
         self.signal_quality_icon = QLabel()
         self.layout.addWidget(self.signal_quality_icon, 1, 8)
 
         # Add a horizontal spacer at column 6 (or any column to the left of the indicator)
-        spacer = QSpacerItem(50, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.layout.addItem(spacer, 1, 7)
+        spacer = QSpacerItem(35, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.layout.addItem(spacer, 1, 6)
 
         # signal quality threading
         self.signal_quality_thread = SignalQualityThread()
@@ -106,12 +101,11 @@ class App(QWidget):
             self.login()
  
     def update_signal_quality_icon(self, signal_quality):
-        print("Updating signal quality icon:", signal_quality)
+        print("Updating signal quality icon:", signal_quality) # delete line later, for dev purposes only
         # update the signal quality indicator icon based on signal_quality
         if signal_quality == 1:
             # set icon to excellent
             pixmap = QPixmap('images/excellent.png')
-            print(pixmap.isNull())
             self.signal_quality_icon.setToolTip('Excellent Signal')
         elif signal_quality == 2:
             # set icon to good
@@ -127,14 +121,14 @@ class App(QWidget):
             self.signal_quality_icon.setToolTip('Weak Signal')
         elif signal_quality == 5:
             # set icon to none
-            pixmap = QPixmap('images/none.png')
+            pixmap = QPixmap('images/offline.png')
             self.signal_quality_icon.setToolTip('No Signal')
         else:
             # set icon to error
             pixmap = QPixmap('images/error.png')
             self.signal_quality_icon.setToolTip('Error: No CSQ or unexpected value')
 
-        pixmap = pixmap.scaled(30, 30, Qt.KeepAspectRatio)
+        pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.signal_quality_icon.setPixmap(pixmap)
 
     def login(self):
@@ -154,6 +148,9 @@ class App(QWidget):
         # Get the orientation
         orientation = packet.track
 
+        # update the fix status icon
+        self.update_fix_status_icon(packet.mode)
+
         # Send the GPS data to the server
         response = requests.post('http://localhost:5000/update_location', data={'latitude': latitude, 'longitude':
                                                                             longitude, 'orientation': orientation},
@@ -169,6 +166,25 @@ class App(QWidget):
             self.timer = QTimer()
             self.timer.timeout.connect(self.update_location)
             self.timer.start(2000)  # start the timer with an interval of 2 seconds
+    
+    def update_fix_status_icon(self, fix_status):
+        # update the fix status indicator icon based on the fix status
+        if fix_status == 3:
+            # set icon 3d_fix
+            pixmap = QPixmap('images/3d_gps.png')
+            self.fix_status_icon.setToolTip('3D Fix')
+
+        elif fix_status == 2:
+            # set icon to 2d_fix
+            pixmap = QPixmap('images/2d_gps.png')
+            self.fix_status_icon.setToolTip('2D Fix')
+        else:
+            # set icon to none
+            pixmap = QPixmap('images/no_gps.png')
+            self.fix_status_icon.setToolTip('No Fix')
+
+        pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        self.fix_status_icon.setPixmap(pixmap)
 
     def toggle_tracking(self):
         if self.tryfi is None:

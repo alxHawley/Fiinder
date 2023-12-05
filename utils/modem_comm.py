@@ -23,16 +23,18 @@ def send_at(ser):
 
 # interpret csq value
 def signal_quality_indicator(rssi, rsrq):
-    if rssi >= 31 and rsrq <= 3:
-        return 1 # "Excellent Signal"
+    if rssi is None or rsrq is None or not isinstance(rssi, int) or not isinstance(rsrq, int):
+        return -1  # "Error: No CSQ"
+    elif rssi >= 31 and rsrq <= 3:
+        return 1  # "Excellent Signal"
     elif rssi >= 22 and rsrq <= 3:
-        return 2 # "Very Good Signal"
+        return 2  # "Very Good Signal"
     elif rssi >= 12 and rsrq <= 6:
-        return 3 # "Good Signal"
+        return 3  # "Good Signal"
     elif rssi >= 2 and rsrq <= 7:
-        return 4 # "Signal may degrade"
+        return 4  # "Signal may degrade"
     else:
-        return 5 # "Signal quality not defined"
+        return 5  # "Signal quality not defined"
 
 def get_signal_quality(port, rssi, rsrq):
     ser = open_modem_connection(port)
