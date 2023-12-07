@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO
 
+
 app = Flask(__name__)
 socketio = SocketIO(app)
 
@@ -14,7 +15,6 @@ def update_location():
     latitude = request.form.get('latitude')
     longitude = request.form.get('longitude')
     orientation = request.form.get('orientation')  # get the orientation data
-
 
     # emit the 'update_location' event with the GPS data
     socketio.emit('update_location', {'latitude': latitude, 'longitude': longitude, 'orientation': orientation})

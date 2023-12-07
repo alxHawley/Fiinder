@@ -44,3 +44,34 @@ def get_signal_quality(port, rssi, rsrq):
         signal_quality = signal_quality_indicator(rssi, rsrq)
         print("Signal Quality: " + str(signal_quality))
         return signal_quality
+
+
+#############################################################################################################
+# network commands
+
+# # send AT command to modem
+# def send_at(ser, command):
+#     ser.write(command + '\r\n')
+#     response_lines = []
+#     while True:
+#         line = ser.readline()
+#         response_lines.append(line)
+#         if b'OK' in line or b'ERROR' in line:
+#             break
+#     return response_lines
+
+# # scan for available networks
+# def scan_networks(ser):
+#     response_lines = send_at(ser, 'AT+COPS=?')
+#     # parse response to get list of networks
+#     return response_lines
+
+# # register on a network
+# def register_network(ser, network_code):
+#     response_lines = send_at(ser, 'AT+COPS=1,2,"' + network_code + '"')
+#     return response_lines
+
+# # automatically register on a network
+# def auto_register_network(ser):
+#     response_lines = send_at(ser, 'AT+COPS=0')
+#     return response_lines
