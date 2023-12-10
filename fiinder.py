@@ -1,9 +1,9 @@
-from flask import Flask
-from flask_socketio import SocketIO
 import sys
 import os
 import subprocess
 import time
+from flask import Flask
+from flask_socketio import SocketIO
 from utils.modem_comm import open_modem_connection, send_at, signal_quality_indicator
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QGridLayout, QSpacerItem, QSizePolicy
@@ -89,7 +89,7 @@ class App(QWidget):
         self.setGeometry(300, 300, 900, 500)
 
         # Start the Flask server
-        self.flask_process = subprocess.Popen(["python", "/home/alexh/fiinder/server.py"])
+        self.flask_process = subprocess.Popen(["python", "/home/alexh/Fiinder/server.py"])
 
         # create a network access manager
         self.manager = QNetworkAccessManager()        
