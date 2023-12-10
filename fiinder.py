@@ -1,3 +1,5 @@
+from flask import Flask
+from flask_socketio import SocketIO
 import sys
 import os
 import subprocess
@@ -12,6 +14,11 @@ from pytryfi import PyTryFi
 import requests
 import gpsd
 
+# Initialize Flask app
+app = Flask(__name__)
+
+# Initialize SocketIO app
+socketio = SocketIO(app)
 
 class SignalQualityThread(QThread):
     """Thread for updating the signal quality indicator."""
@@ -101,7 +108,7 @@ class App(QWidget):
         gpsd.connect()
 
         # delay the first update_location call
-        QTimer.singleShot(1000, self.update_location)
+        QTimer.singleShot(2500, self.update_location)
 
         # create tracking status label
         self.tracking_button = QPushButton('Start Tracking', self)
@@ -126,8 +133,7 @@ class App(QWidget):
         self.signal_quality_thread = SignalQualityThread()
         self.signal_quality_thread.signal_quality_updated.connect(self.update_signal_quality_icon)
         self.signal_quality_thread.start()
-        
- 
+
     def update_signal_quality_icon(self, signal_quality):
         """Update the signal quality indicator icon."""
         # print("Updating signal quality icon:", signal_quality) # delete line later, for dev purposes only
@@ -240,9 +246,12 @@ class App(QWidget):
             self.tracking = False
             self.tracking_button.setText('Start Tracking')
             self.tryfi.pets[0].setLostDogMode(self.tryfi.session, False)
-            self.lost_dog_mode_timer.stop()  # stop the timer when you stop tracking
+            self.lost_dog_mode_timer.stop()  # stop lost dog timer when you stop tracking
             if self.tracking_timer is not None:
-                self.tracking_time.stop()  # also stop the fetch_location timer when you stop tracking
+                self.tracking_timer.stop()  # stop tracking timer when you stop tracking
+            if self.fetch_timer is not None:
+                self.fetch_timer.stop()  # stop the fetch_location timer when you stop tracking
+            socketio.emit('hide_marker')
         else:
             self.tracking = True
             self.tracking_button.setText('Stop Tracking')
@@ -250,7 +259,7 @@ class App(QWidget):
             self.lost_dog_mode_timer.start(5000)  # start the timer when you start tracking
             if self.tracking_timer is None:
                 self.tracking_timer.timeout.connect(self.fetch_location)
-        self.tracking_timer.start(5000)  # also start the fetch_location timer when you start tracking
+            self.tracking_timer.start(5000)  # also start the fetch_location timer when you start tracking
 
         # add a delay before checking the isLost property
         QTimer.singleShot(1000, self.check_and_enable_lost_dog_mode)  # delay of 1000 milliseconds
