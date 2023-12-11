@@ -20,9 +20,11 @@ app = Flask(__name__)
 # Initialize SocketIO app
 socketio = SocketIO(app)
 
+
 class SignalQualityThread(QThread):
     """Thread for updating the signal quality indicator."""
     signal_quality_updated = pyqtSignal(int)
+
     def run(self):
         """Run the signal quality thread."""
         port = "/dev/ttyUSB2"
@@ -40,7 +42,7 @@ class SignalQualityThread(QThread):
         for line in response:
             signal_info = line.decode('utf-8').strip()  # Remove newline characters
             if signal_info.startswith('+CSQ:'):
-                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')] # Split for rssi/rsrq
+                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]  # Split for rssi/rsrq
                 signal_quality = signal_quality_indicator(rssi, rsrq)
                 self.signal_quality_updated.emit(signal_quality)
                 # print("Signal Quality: " + str(signal_quality)) # dev/delete
@@ -49,8 +51,10 @@ class SignalQualityThread(QThread):
             print("No +CSQ line found in response")
             self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ
 
+
 class App(QWidget):
     """The main application window."""
+
     def __init__(self, skip_login=False):
         """Initialize the application window."""
         super().__init__()
@@ -58,8 +62,8 @@ class App(QWidget):
         # initialize instance variables
         self.tryfi = None
         self.tracking = False
-        
-        ####### TIMERS #######
+
+        # TIMERS ##################################
 
         # start the timer to check the server status
         self.server_status_timer = QTimer()
@@ -91,7 +95,7 @@ class App(QWidget):
         self.flask_process = subprocess.Popen(["python", "/home/alexh/Fiinder/server.py"])
 
         # create a network access manager
-        self.manager = QNetworkAccessManager()        
+        self.manager = QNetworkAccessManager()
 
         # clear the map cache
         QWebEngineProfile.defaultProfile().clearHttpCache()
@@ -203,19 +207,18 @@ class App(QWidget):
 
         # Send the GPS data to the server
         response = requests.post('http://localhost:5000/update_location', data={'latitude': latitude, 'longitude':
-                                                                            longitude, 'orientation': orientation},
-                                                                            timeout=5)
+                                                                                longitude, 'orientation': orientation},
+                                 timeout=5)
         if response.status_code == 200:
             print('***Successfully sent GPS location to server***')
         else:
             print('***Failed to send GPS location to server***')
-    
+
         # Schedule the next update
         if self.update_location_timer is None or not self.update_location_timer.isActive():
-            
             self.update_location_timer.timeout.connect(self.update_location)
             self.update_location_timer.start(2000)  # start the timer with an interval of 2 seconds
-    
+
     def update_fix_status_icon(self, fix_status):
         """Update the GPS fix status indicator icon."""
         # update the fix status indicator icon based on the fix status
@@ -290,8 +293,8 @@ class App(QWidget):
 
             # Send the collar location data to the server
             response = requests.post('http://localhost:5000/update_tracked_location',
-                                     data={'latitude': latitude,'longitude': longitude}, timeout=5)
-                        
+                                     data={'latitude': latitude, 'longitude': longitude}, timeout=5)
+
             if response.status_code == 200:
                 print('*****COLLAR location sent to server*****')
             else:
@@ -306,13 +309,13 @@ class App(QWidget):
                 self.fetch_timer.timeout.connect(self.fetch_location)
                 self.fetch_timer.start(5000)  # start the timer with an interval
 
-    def close_event(self, event):
+    def closeEvent(self, event):
         """Override the default close event handler."""
         # stop the Flask server
         self.flask_process.kill()
 
         # continue with the default close event handling
-        super().close_event(event)
+        super().closeEvent(event)
 
 
 if __name__ == '__main__':
