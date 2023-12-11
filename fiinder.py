@@ -23,7 +23,6 @@ socketio = SocketIO(app)
 class SignalQualityThread(QThread):
     """Thread for updating the signal quality indicator."""
     signal_quality_updated = pyqtSignal(int)
-    
     def run(self):
         """Run the signal quality thread."""
         port = "/dev/ttyUSB2"
@@ -41,10 +40,10 @@ class SignalQualityThread(QThread):
         for line in response:
             signal_info = line.decode('utf-8').strip()  # Remove newline characters
             if signal_info.startswith('+CSQ:'):
-                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]  # Split the line to get rssi and rsrq
+                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')] # Split for rssi/rsrq
                 signal_quality = signal_quality_indicator(rssi, rsrq)
                 self.signal_quality_updated.emit(signal_quality)
-                # print("Signal Quality: " + str(signal_quality)) # delete this line later, for dev purposes only
+                # print("Signal Quality: " + str(signal_quality)) # dev/delete
                 break  # Exit the loop once we've found the +CSQ line
         else:
             print("No +CSQ line found in response")
