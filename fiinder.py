@@ -1,3 +1,6 @@
+"""
+This is the main application file for the Fiinder application.
+"""
 import sys
 import os
 import subprocess
