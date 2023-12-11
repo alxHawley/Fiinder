@@ -307,21 +307,19 @@ class App(QWidget):
                 self.fetch_timer.timeout.connect(self.fetch_location)
                 self.fetch_timer.start(5000)  # start the timer with an interval
 
-    def closeEvent(self, event):
+    def close_event(self, event):
         """Override the default close event handler."""
         # stop the Flask server
         self.flask_process.kill()
 
         # continue with the default close event handling
-        super().closeEvent(event)
+        super().close_event(event)
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-
     main = App()
     main.show()
-
     sys.exit(app.exec_())
 
 app = QApplication([])
