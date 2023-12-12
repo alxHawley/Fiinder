@@ -7,15 +7,19 @@ import subprocess
 import time
 from flask import Flask
 from flask_socketio import SocketIO
-from utils.modem_comm import open_modem_connection, send_at, signal_quality_indicator
+from utils.modem_comm import open_modem_connection, at_csq, signal_quality_indicator
+# pylint: disable=no-name-in-module
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QGridLayout, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
+from PyQt5.QtWidgets import QGridLayout,QSpacerItem, QSizePolicy
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
+# pylint: enable=no-name-in-module
 from pytryfi import PyTryFi
 import requests
 import gpsd
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -39,21 +43,21 @@ class SignalQualityThread(QThread):
 
     def update_signal_quality(self, ser):
         """Parse the response from the modem and emit the signal quality value."""
-        response = send_at(ser)
-        # print(response) # delete this line later, for dev purposes only
+        response = at_csq(ser)
+        # print(response) # dev/delete
         # parse response to get rssi and rsrq values
         for line in response:
             signal_info = line.decode('utf-8').strip()  # Remove newline characters
             if signal_info.startswith('+CSQ:'):
-                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]  # Split for rssi/rsrq
+                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]
                 signal_quality = signal_quality_indicator(rssi, rsrq)
                 self.signal_quality_updated.emit(signal_quality)
                 # print("Signal Quality: " + str(signal_quality)) # dev/delete
-                break  # Exit the loop once we've found the +CSQ line
+                break  # Exit the loop once +CSQ line is found
         else:
             print("No +CSQ line found in response")
-            self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ
-
+            self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ for indicator
+            # !!add modem utils to restart modem or initiatete scan/a new connection
 
 class App(QWidget):
     """The main application window."""
@@ -142,7 +146,7 @@ class App(QWidget):
 
     def update_signal_quality_icon(self, signal_quality):
         """Update the signal quality indicator icon."""
-        # print("Updating signal quality icon:", signal_quality) # delete line later, for dev purposes only
+        # print("Updating signal quality icon:", signal_quality) # dev/delete
         # update the signal quality indicator icon based on signal_quality
         if signal_quality == 1:
             # set icon to excellent
@@ -209,9 +213,10 @@ class App(QWidget):
         self.update_fix_status_icon(packet.mode)
 
         # Send the GPS data to the server
-        response = requests.post('http://localhost:5000/update_location', data={'latitude': latitude, 'longitude':
-                                                                                longitude, 'orientation': orientation},
-                                 timeout=5)
+        response = requests.post('http://localhost:5000/update_location',
+                                data={'latitude': latitude, 'longitude':
+                                longitude, 'orientation': orientation},
+                                timeout=5)
         if response.status_code == 200:
             print('***Successfully sent GPS location to server***')
         else:
@@ -261,10 +266,10 @@ class App(QWidget):
             self.tracking = True
             self.tracking_button.setText('Stop Tracking')
             self.tryfi.pets[0].setLostDogMode(self.tryfi.session, True)
-            self.lost_dog_mode_timer.start(5000)  # start the timer when you start tracking
+            self.lost_dog_mode_timer.start(5000)  # start lost_mode timer when tracking starts
             if self.tracking_timer is None:
                 self.tracking_timer.timeout.connect(self.fetch_location)
-            self.tracking_timer.start(5000)  # also start the fetch_location timer when you start tracking
+            self.tracking_timer.start(5000)  # start fetch_location timer when tracking starts
 
         # add a delay before checking the isLost property
         QTimer.singleShot(1000, self.check_and_enable_lost_dog_mode)  # delay of 1000 milliseconds
@@ -312,7 +317,7 @@ class App(QWidget):
                 self.fetch_timer.timeout.connect(self.fetch_location)
                 self.fetch_timer.start(5000)  # start the timer with an interval
 
-    def closeEvent(self, event):
+    def closeEvent(self, event): # pylint: disable=invalid-name
         """Override the default close event handler."""
         # stop the Flask server
         self.flask_process.kill()

@@ -3,6 +3,7 @@ import logging
 
 # open serial port
 def open_modem_connection(port, baud_rate=9600, timeout=1):
+    """method to open a serial connection to the modem"""
     try:
         ser = serial.Serial(port, baud_rate, timeout=timeout)
         return ser
@@ -10,8 +11,9 @@ def open_modem_connection(port, baud_rate=9600, timeout=1):
         logging.error("Could not open serial port: %s", e)
         return None
 
-# send AT for signal strength
-def send_at(ser):
+# send AT+CSQ for signal quality
+def at_csq(ser):
+    """method to send AT+CSQ command to modem and return response"""
     ser.write(b'AT+CSQ\r\n')
     response_lines = []
     while True:
@@ -23,6 +25,7 @@ def send_at(ser):
 
 # interpret csq value
 def signal_quality_indicator(rssi, rsrq):
+    """method to interpret rssi and rsrq values and return signal quality"""
     if rssi is None or rsrq is None or not isinstance(rssi, int) or not isinstance(rsrq, int):
         return -1  # "Error: No CSQ"
     elif rssi >= 31 and rsrq <= 3:
@@ -36,17 +39,8 @@ def signal_quality_indicator(rssi, rsrq):
     else:
         return 5  # "Signal quality not defined"
 
-def get_signal_quality(port, rssi, rsrq):
-    ser = open_modem_connection(port)
-    if ser is not None:
-        send_at(ser)
-        # parse response to get rssi and rsrq values
-        signal_quality = signal_quality_indicator(rssi, rsrq)
-        print("Signal Quality: " + str(signal_quality))
-        return signal_quality
 
-
-#############################################################################################################
+##############################################################################
 # network commands
 
 # # send AT command to modem
