@@ -4,9 +4,12 @@ Fiinder is a Python application that utilizes the [PyTryFi](https://github.com/s
 
 ## Hardware:
 Raspberry Pi 4
+
 Sixfab 3g/4g LTE Base Hat
+
 Telit ME910C1-WW Mini PCle LTE-M Module
-Adafruit Ultimate GPS with an active antenna
+
+Adafruit Ultimate GPS & active antenna
 
 ## Application:
 Python
