@@ -1,8 +1,11 @@
-
-*.pyc
-
 # Ignore all files in the dist directory
 /dist/*
 
 # Ignore all files in the build directory
 /build/*
+
+# Ignore all files in the .idea directory
+/.idea/*
+
+# Ignore all files in the __pycache__ directory
+/__pycache__/*
