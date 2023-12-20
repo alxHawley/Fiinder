@@ -5,8 +5,6 @@ import sys
 import os
 import subprocess
 import time
-# from flask import Flask
-# from flask_socketio import SocketIO
 from server import app, socketio
 from utils.modem_comm import open_modem_connection, at_csq, signal_quality_indicator
 # pylint: disable=no-name-in-module
