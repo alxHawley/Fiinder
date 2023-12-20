@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, asysnc_mode='threading')
 
 @app.route('/')
 def index():

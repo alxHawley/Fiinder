@@ -5,8 +5,9 @@ import sys
 import os
 import subprocess
 import time
-from flask import Flask
-from flask_socketio import SocketIO
+# from flask import Flask
+# from flask_socketio import SocketIO
+from server import app, socketio
 from utils.modem_comm import open_modem_connection, at_csq, signal_quality_indicator
 # pylint: disable=no-name-in-module
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
@@ -19,13 +20,6 @@ from PyQt5.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
 from pytryfi import PyTryFi
 import requests
 import gpsd
-
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Initialize SocketIO app
-socketio = SocketIO(app)
 
 
 class SignalQualityThread(QThread):
@@ -55,7 +49,7 @@ class SignalQualityThread(QThread):
                 # print("Signal Quality: " + str(signal_quality)) # dev/delete
                 break  # Exit the loop once +CSQ line is found
         else:
-            print("No +CSQ line found in response")
+            # print("No +CSQ line found in response") # dev/delete
             self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ for indicator
             # !!add modem utils to restart modem or initiatete scan/a new connection
 
@@ -209,7 +203,7 @@ class App(QWidget):
         # Get the orientation
         orientation = packet.track
 
-        # update the fix status icon
+        # Get the fix status
         self.update_fix_status_icon(packet.mode)
 
         # Send the GPS data to the server
@@ -261,7 +255,7 @@ class App(QWidget):
                 self.tracking_timer.stop()  # stop tracking timer when you stop tracking
             if self.fetch_timer is not None:
                 self.fetch_timer.stop()  # stop the fetch_location timer when you stop tracking
-            socketio.emit('hide_marker')
+                socketio.emit('hide_marker')
         else:
             self.tracking = True
             self.tracking_button.setText('Stop Tracking')
