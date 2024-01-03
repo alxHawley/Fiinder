@@ -5,7 +5,6 @@ import sys
 import os
 import subprocess
 import time
-from server import app, socketio
 from utils.modem_comm import open_modem_connection, at_csq, signal_quality_indicator
 # pylint: disable=no-name-in-module
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
@@ -61,6 +60,7 @@ class App(QWidget):
         # initialize instance variables
         self.tryfi = None
         self.tracking = False
+        self.has_fix = False
 
         # TIMERS ##################################
 
@@ -108,9 +108,6 @@ class App(QWidget):
 
         # initialize gpsd and start updating GPS location
         gpsd.connect()
-
-        # delay the first update_location call
-        QTimer.singleShot(2500, self.update_location)
 
         # create tracking status label
         self.tracking_button = QPushButton('Start Tracking', self)
@@ -180,6 +177,10 @@ class App(QWidget):
             # the server is up, stop the timer and load the map
             self.server_status_timer.stop()
             self.map.load(QUrl('http://localhost:5000'))
+
+            # Call update_location after the map has loaded
+            self.update_location()
+
         reply.deleteLater()  # clean up
 
     def login(self):
@@ -194,25 +195,27 @@ class App(QWidget):
         # Get the current gpsd position
         packet = gpsd.get_current()
 
-        # Get the latitude and longitude
-        latitude = packet.lat
-        longitude = packet.lon
+        # Check if a GPS fix has been acquired
+        if packet.mode >= 2:
+            # Get the latitude and longitude
+            latitude = packet.lat
+            longitude = packet.lon
 
-        # Get the orientation
-        orientation = packet.track
+            # Get the orientation
+            orientation = packet.track
 
-        # Get the fix status
+            # Send the GPS data to the server
+            response = requests.post('http://localhost:5000/update_location',
+                                    data={'latitude': latitude, 'longitude':
+                                    longitude, 'orientation': orientation},
+                                    timeout=5)
+            if response.status_code == 200:
+                print('***Successfully sent GPS location to server***')
+            else:
+                print('***Failed to send GPS location to server***')
+
+        # Update the fix status icon regardless of whether a fix has been obtained
         self.update_fix_status_icon(packet.mode)
-
-        # Send the GPS data to the server
-        response = requests.post('http://localhost:5000/update_location',
-                                data={'latitude': latitude, 'longitude':
-                                longitude, 'orientation': orientation},
-                                timeout=5)
-        if response.status_code == 200:
-            print('***Successfully sent GPS location to server***')
-        else:
-            print('***Failed to send GPS location to server***')
 
         # Schedule the next update
         if self.update_location_timer is None or not self.update_location_timer.isActive():
@@ -226,15 +229,29 @@ class App(QWidget):
             # set icon 3d_fix
             pixmap = QPixmap('images/3d_gps.png')
             self.fix_status_icon.setToolTip('3D Fix')
+            self.has_fix = True
 
         elif fix_status == 2:
             # set icon to 2d_fix
             pixmap = QPixmap('images/2d_gps.png')
             self.fix_status_icon.setToolTip('2D Fix')
+            self.has_fix = True
         else:
             # set icon to none
             pixmap = QPixmap('images/no_gps.png')
             self.fix_status_icon.setToolTip('No Fix')
+
+            # If the fix status has changed from having a fix to not having a fix, send a request to the server to clear the location
+            if self.has_fix:
+
+                # Send a request to the server to clear the location
+                try:
+                    response = requests.post('http://localhost:5000/clear_location', timeout=5)
+                    if response.status_code == 200:
+                        print('***Successfully sent clear location to server***')
+                except requests.exceptions.RequestException as err:
+                    print ("Error sending clear location request", err)
+                self.has_fix = False
 
         pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.fix_status_icon.setPixmap(pixmap)
@@ -253,7 +270,7 @@ class App(QWidget):
                 self.tracking_timer.stop()  # stop tracking timer when you stop tracking
             if self.fetch_timer is not None:
                 self.fetch_timer.stop()  # stop the fetch_location timer when you stop tracking
-                socketio.emit('hide_marker')
+                requests.post('http://localhost:5000/hide_marker', timeout=5)
         else:
             self.tracking = True
             self.tracking_button.setText('Stop Tracking')
