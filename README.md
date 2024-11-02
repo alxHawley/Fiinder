@@ -1,6 +1,6 @@
-# Fiinder - A Simple Python application with GPS & LTE-M connectivity
+# Fiinder - A Simple Python application with GPS and LTE-M connectivity that features a map with live location and tracking data.
 
-Fiinder is a Python application that utilizes the [PyTryFi](https://github.com/sbabcock23/pytryfi) interface to interact with the Fi dog tracking collar. I started this project to extend tracking capabilities into more remote areas. The problem solved by the application and hardware, is that the Fi collar operates on the LTE-M network which often times reaches 2x as far as other 4g/5g bands. This creates a fringe zone where the collar is fully operable but the Android or IOS app does not have service. I wanted to be able to use the tracking capabilities of the collar in those areas where LTE-M is available but cell phones are out of range. The app can run in a desktop environment but it is being built for a mobile handheld device that has GPS and Cellular connectivity.
+Fiinder is a Python application that utilizes the [PyTryFi](https://github.com/sbabcock23/pytryfi) interface to interact with the Fi dog tracking collar. I started this project to extend tracking capabilities into more remote areas. The problem solved by the application and hardware, is that the Fi collar operates on the LTE-M network which often times reaches 2x as far as other 4g/5g bands. This creates a fringe zone where the collar is fully operable but the Android or IOS app does not function. I wanted to be able to use the tracking capabilities of the collar in those areas where LTE-M is available but cell phones are out of range. The app can run in a desktop environment but it is designed as a mobile handheld device that has GPS and Cellular connectivity.
 
 The project is still in development wtih plans for code optimization, offline mapping, and more robust features and utlities.
 
@@ -36,9 +36,9 @@ HTML
 
 Cellular signal quality indicator supported by a modem utility which constantly reads signal quality
 
-GPS fix indicator for 3D, 2D, and no fix, reported from GPSD monitoring external GPS
+GPS fix indicator for 3D, 2D, and no fix, reported from GPSD monitoring of external GPS
 
-Online mapping optimized using concurrent requests to multiple tile subdomains to decrease latency/ map rendering issues
+Online mapping optimized using concurrent requests to multiple subdomains to decrease latency/ map rendering issues
 
 Tracking using PyTryFi
 
