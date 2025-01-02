@@ -1,26 +1,39 @@
 """
 This is the main application file for the Fiinder application.
 """
-import sys
+
 import os
 import subprocess
+import sys
 import time
-from utils.modem_comm import open_modem_connection, at_csq, signal_quality_indicator
-# pylint: disable=no-name-in-module
-from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
-from PyQt5.QtWidgets import QGridLayout,QSpacerItem, QSizePolicy
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile
+
+import gpsd
+import requests
+from PyQt5.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QUrl, QTimer, QThread, pyqtSignal
+
+# pylint: disable=no-name-in-module
+from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PyQt5.QtWebEngineWidgets import QWebEngineProfile, QWebEngineView
+from PyQt5.QtWidgets import (
+    QApplication,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QWidget,
+)
+
 # pylint: enable=no-name-in-module
 from pytryfi import PyTryFi
-import requests
-import gpsd
+
+from utils.modem_comm import at_csq, open_modem_connection, signal_quality_indicator
 
 
 class SignalQualityThread(QThread):
     """Thread for updating the signal quality indicator."""
+
     signal_quality_updated = pyqtSignal(int)
 
     def run(self):
@@ -38,17 +51,20 @@ class SignalQualityThread(QThread):
         # print(response) # dev/delete
         # parse response to get rssi and rsrq values
         for line in response:
-            signal_info = line.decode('utf-8').strip()  # Remove newline characters
-            if signal_info.startswith('+CSQ:'):
-                rssi, rsrq = [int(x) for x in signal_info.split(':')[1].split(',')]
+            signal_info = line.decode("utf-8").strip()  # Remove newline characters
+            if signal_info.startswith("+CSQ:"):
+                rssi, rsrq = [int(x) for x in signal_info.split(":")[1].split(",")]
                 signal_quality = signal_quality_indicator(rssi, rsrq)
                 self.signal_quality_updated.emit(signal_quality)
                 # print("Signal Quality: " + str(signal_quality)) # dev/delete
                 break  # Exit the loop once +CSQ line is found
         else:
             # print("No +CSQ line found in response") # dev/delete
-            self.signal_quality_updated.emit(-1)  # Emit special value for no CSQ for indicator
+            self.signal_quality_updated.emit(
+                -1
+            )  # Emit special value for no CSQ for indicator
             # !!add modem utils to restart modem or initiatete scan/a new connection
+
 
 class App(QWidget):
     """The main application window."""
@@ -87,11 +103,13 @@ class App(QWidget):
         # create the layout
         self.layout = QGridLayout()
         self.setLayout(self.layout)
-        self.setWindowTitle('Fiinder')
+        self.setWindowTitle("Fiinder")
         self.setGeometry(300, 300, 900, 500)
 
         # Start the Flask server
-        self.flask_process = subprocess.Popen(["python", "/home/alexh/Fiinder/server.py"])
+        self.flask_process = subprocess.Popen(
+            ["python", "/home/alexh/Fiinder/server.py"]
+        )
 
         # create a network access manager
         self.manager = QNetworkAccessManager()
@@ -110,7 +128,7 @@ class App(QWidget):
         gpsd.connect()
 
         # create tracking status label
-        self.tracking_button = QPushButton('Start Tracking', self)
+        self.tracking_button = QPushButton("Start Tracking", self)
         self.tracking_button.clicked.connect(self.toggle_tracking)
         self.tracking_button.setFixedSize(115, 30)
 
@@ -130,7 +148,9 @@ class App(QWidget):
 
         # signal quality threading
         self.signal_quality_thread = SignalQualityThread()
-        self.signal_quality_thread.signal_quality_updated.connect(self.update_signal_quality_icon)
+        self.signal_quality_thread.signal_quality_updated.connect(
+            self.update_signal_quality_icon
+        )
         self.signal_quality_thread.start()
 
     def update_signal_quality_icon(self, signal_quality):
@@ -139,35 +159,35 @@ class App(QWidget):
         # update the signal quality indicator icon based on signal_quality
         if signal_quality == 1:
             # set icon to excellent
-            pixmap = QPixmap('images/excellent.png')
-            self.signal_quality_icon.setToolTip('Excellent Signal')
+            pixmap = QPixmap("images/excellent.png")
+            self.signal_quality_icon.setToolTip("Excellent Signal")
         elif signal_quality == 2:
             # set icon to good
-            pixmap = QPixmap('images/good.png')
-            self.signal_quality_icon.setToolTip('Good Signal')
+            pixmap = QPixmap("images/good.png")
+            self.signal_quality_icon.setToolTip("Good Signal")
         elif signal_quality == 3:
             # set icon to ok
-            pixmap = QPixmap('images/ok.png')
-            self.signal_quality_icon.setToolTip('OK Signal')
+            pixmap = QPixmap("images/ok.png")
+            self.signal_quality_icon.setToolTip("OK Signal")
         elif signal_quality == 4:
             # set icon to weak
-            pixmap = QPixmap('images/weak.png')
-            self.signal_quality_icon.setToolTip('Weak Signal')
+            pixmap = QPixmap("images/weak.png")
+            self.signal_quality_icon.setToolTip("Weak Signal")
         elif signal_quality == 5:
             # set icon to none
-            pixmap = QPixmap('images/offline.png')
-            self.signal_quality_icon.setToolTip('No Signal')
+            pixmap = QPixmap("images/offline.png")
+            self.signal_quality_icon.setToolTip("No Signal")
         else:
             # set icon to error
-            pixmap = QPixmap('images/error.png')
-            self.signal_quality_icon.setToolTip('Error: No CSQ or unexpected value')
+            pixmap = QPixmap("images/error.png")
+            self.signal_quality_icon.setToolTip("Error: No CSQ or unexpected value")
 
         pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.signal_quality_icon.setPixmap(pixmap)
 
     def check_server_status(self):
         """Check the server status and load the map if the server is up."""
-        request = QNetworkRequest(QUrl('http://localhost:5000'))
+        request = QNetworkRequest(QUrl("http://localhost:5000"))
         self.manager.head(request)  # send a HEAD request to the server
         self.manager.finished.connect(self.on_finished)
 
@@ -176,7 +196,7 @@ class App(QWidget):
         if reply.error() == QNetworkReply.NoError:
             # the server is up, stop the timer and load the map
             self.server_status_timer.stop()
-            self.map.load(QUrl('http://localhost:5000'))
+            self.map.load(QUrl("http://localhost:5000"))
 
             # Call update_location after the map has loaded
             self.update_location()
@@ -186,8 +206,8 @@ class App(QWidget):
     def login(self):
         """Log in to the Fi server and initialize the PyTryFi object."""
         # initialize the PyTryFi object with the email and password
-        email = os.getenv('TRYFI_EMAIL')
-        password = os.getenv('TRYFI_PASSWORD')
+        email = os.getenv("TRYFI_EMAIL")
+        password = os.getenv("TRYFI_PASSWORD")
         self.tryfi = PyTryFi(email, password)
 
     def update_location(self):
@@ -205,52 +225,63 @@ class App(QWidget):
             orientation = packet.track
 
             # Send the GPS data to the server
-            response = requests.post('http://localhost:5000/update_location',
-                                    data={'latitude': latitude, 'longitude':
-                                    longitude, 'orientation': orientation},
-                                    timeout=5)
+            response = requests.post(
+                "http://localhost:5000/update_location",
+                data={
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "orientation": orientation,
+                },
+                timeout=5,
+            )
             if response.status_code == 200:
-                print('***Successfully sent GPS location to server***')
+                print("***Successfully sent GPS location to server***")
             else:
-                print('***Failed to send GPS location to server***')
+                print("***Failed to send GPS location to server***")
 
         # Update the fix status icon regardless of whether a fix has been obtained
         self.update_fix_status_icon(packet.mode)
 
         # Schedule the next update
-        if self.update_location_timer is None or not self.update_location_timer.isActive():
+        if (
+            self.update_location_timer is None
+            or not self.update_location_timer.isActive()
+        ):
             self.update_location_timer.timeout.connect(self.update_location)
-            self.update_location_timer.start(2000)  # start the timer with an interval of 2 seconds
+            self.update_location_timer.start(
+                2000
+            )  # start the timer with an interval of 2 seconds
 
     def update_fix_status_icon(self, fix_status):
         """Update the GPS fix status indicator icon."""
         # update the fix status indicator icon based on the fix status
         if fix_status == 3:
             # set icon 3d_fix
-            pixmap = QPixmap('images/3d_gps.png')
-            self.fix_status_icon.setToolTip('3D Fix')
+            pixmap = QPixmap("images/3d_gps.png")
+            self.fix_status_icon.setToolTip("3D Fix")
             self.has_fix = True
 
         elif fix_status == 2:
             # set icon to 2d_fix
-            pixmap = QPixmap('images/2d_gps.png')
-            self.fix_status_icon.setToolTip('2D Fix')
+            pixmap = QPixmap("images/2d_gps.png")
+            self.fix_status_icon.setToolTip("2D Fix")
             self.has_fix = True
         else:
             # set icon to none
-            pixmap = QPixmap('images/no_gps.png')
-            self.fix_status_icon.setToolTip('No Fix')
+            pixmap = QPixmap("images/no_gps.png")
+            self.fix_status_icon.setToolTip("No Fix")
 
             # If the fix status has changed from having a fix to not having a fix, send a request to the server to clear the location
             if self.has_fix:
-
                 # Send a request to the server to clear the location
                 try:
-                    response = requests.post('http://localhost:5000/clear_location', timeout=5)
+                    response = requests.post(
+                        "http://localhost:5000/clear_location", timeout=5
+                    )
                     if response.status_code == 200:
-                        print('***Successfully sent clear location to server***')
+                        print("***Successfully sent clear location to server***")
                 except requests.exceptions.RequestException as err:
-                    print ("Error sending clear location request", err)
+                    print("Error sending clear location request", err)
                 self.has_fix = False
 
         pixmap = pixmap.scaled(25, 25, Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -263,25 +294,31 @@ class App(QWidget):
 
         if self.tracking:
             self.tracking = False
-            self.tracking_button.setText('Start Tracking')
+            self.tracking_button.setText("Start Tracking")
             self.tryfi.pets[0].setLostDogMode(self.tryfi.session, False)
             self.lost_dog_mode_timer.stop()  # stop lost dog timer when you stop tracking
             if self.tracking_timer is not None:
                 self.tracking_timer.stop()  # stop tracking timer when you stop tracking
             if self.fetch_timer is not None:
                 self.fetch_timer.stop()  # stop the fetch_location timer when you stop tracking
-                requests.post('http://localhost:5000/hide_marker', timeout=5)
+                requests.post("http://localhost:5000/hide_marker", timeout=5)
         else:
             self.tracking = True
-            self.tracking_button.setText('Stop Tracking')
+            self.tracking_button.setText("Stop Tracking")
             self.tryfi.pets[0].setLostDogMode(self.tryfi.session, True)
-            self.lost_dog_mode_timer.start(5000)  # start lost_mode timer when tracking starts
+            self.lost_dog_mode_timer.start(
+                5000
+            )  # start lost_mode timer when tracking starts
             if self.tracking_timer is None:
                 self.tracking_timer.timeout.connect(self.fetch_location)
-            self.tracking_timer.start(5000)  # start fetch_location timer when tracking starts
+            self.tracking_timer.start(
+                5000
+            )  # start fetch_location timer when tracking starts
 
         # add a delay before checking the isLost property
-        QTimer.singleShot(1000, self.check_and_enable_lost_dog_mode)  # delay of 1000 milliseconds
+        QTimer.singleShot(
+            1000, self.check_and_enable_lost_dog_mode
+        )  # delay of 1000 milliseconds
 
     def check_and_enable_lost_dog_mode(self):
         """Check the isLost property of the pet and enable lost dog mode if it."""
@@ -309,13 +346,16 @@ class App(QWidget):
             longitude = pet._currLongitude
 
             # Send the collar location data to the server
-            response = requests.post('http://localhost:5000/update_tracked_location',
-                                     data={'latitude': latitude, 'longitude': longitude}, timeout=5)
+            response = requests.post(
+                "http://localhost:5000/update_tracked_location",
+                data={"latitude": latitude, "longitude": longitude},
+                timeout=5,
+            )
 
             if response.status_code == 200:
-                print('*****COLLAR location sent to server*****')
+                print("*****COLLAR location sent to server*****")
             else:
-                print('*****COLLAR location failed to send to server*****')
+                print("*****COLLAR location failed to send to server*****")
 
         else:
             print("Failed to update pet location")
@@ -326,7 +366,7 @@ class App(QWidget):
                 self.fetch_timer.timeout.connect(self.fetch_location)
                 self.fetch_timer.start(5000)  # start the timer with an interval
 
-    def closeEvent(self, event): # pylint: disable=invalid-name
+    def closeEvent(self, event):  # pylint: disable=invalid-name
         """Override the default close event handler."""
         # stop the Flask server
         self.flask_process.kill()
@@ -335,7 +375,7 @@ class App(QWidget):
         super().closeEvent(event)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     main = App()
     main.show()
